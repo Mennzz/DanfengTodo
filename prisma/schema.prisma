@@ -1,0 +1,69 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  name      String
+  color     String   @default("#3B82F6")
+  isDefault Boolean  @default(false)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  weeks     Week[]
+  weekGenerationLogs WeekGenerationLog[]
+
+  @@index([order])
+}
+
+model Week {
+  id         String   @id @default(cuid())
+  categoryId String
+  startDate  DateTime
+  endDate    DateTime
+  weekNumber Int
+  year       Int
+  createdAt  DateTime @default(now())
+
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  todos      Todo[]
+
+  @@unique([categoryId, startDate])
+  @@index([categoryId, startDate])
+  @@index([year, weekNumber])
+}
+
+model Todo {
+  id          String    @id @default(cuid())
+  weekId      String
+  content     String
+  completed   Boolean   @default(false)
+  dueDate     DateTime
+  order       Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  completedAt DateTime?
+
+  week        Week      @relation(fields: [weekId], references: [id], onDelete: Cascade)
+
+  @@index([weekId, dueDate, order])
+  @@index([completed])
+}
+
+model WeekGenerationLog {
+  id              String   @id @default(cuid())
+  categoryId      String   @unique
+  lastGeneratedAt DateTime @default(now())
+  weeksGenerated  Int      @default(0)
+
+  category        Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+}
