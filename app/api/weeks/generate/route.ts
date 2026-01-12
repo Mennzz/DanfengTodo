@@ -7,7 +7,7 @@ import type { GenerateWeeksInput } from '@/types'
 export async function POST(request: Request) {
   try {
     const body: GenerateWeeksInput = await request.json()
-    const { categoryId, weeksAhead = 12 } = body
+    const { categoryId, weeksAhead = 12, year } = body
 
     if (!categoryId) {
       return NextResponse.json(
@@ -28,25 +28,34 @@ export async function POST(request: Request) {
       )
     }
 
-    // Find the last week for this category
-    const lastWeek = await prisma.week.findFirst({
-      where: { categoryId },
-      orderBy: { startDate: 'desc' },
-    })
-
     // Determine start date for generation
     let startDate: Date
-    if (lastWeek) {
-      // Start from the week after the last one
-      startDate = new Date(lastWeek.endDate)
-      startDate.setDate(startDate.getDate() + 1)
+    let weeksToGenerate = weeksAhead
+
+    if (year) {
+      // If year is specified, start from January 1st of that year
+      startDate = new Date(year, 0, 1)
+      // Generate 52 weeks for the full year
+      weeksToGenerate = 52
     } else {
-      // Start from current week
-      startDate = getCurrentWeekStart()
+      // Find the last week for this category
+      const lastWeek = await prisma.week.findFirst({
+        where: { categoryId },
+        orderBy: { startDate: 'desc' },
+      })
+
+      if (lastWeek) {
+        // Start from the week after the last one
+        startDate = new Date(lastWeek.endDate)
+        startDate.setDate(startDate.getDate() + 1)
+      } else {
+        // Start from current week
+        startDate = getCurrentWeekStart()
+      }
     }
 
     // Generate weeks
-    const weeksData = generateWeeks(startDate, weeksAhead)
+    const weeksData = generateWeeks(startDate, weeksToGenerate)
 
     // Create weeks in database
     const createdWeeks = await prisma.$transaction(

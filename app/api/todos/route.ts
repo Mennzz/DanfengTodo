@@ -6,7 +6,7 @@ import type { CreateTodoInput } from '@/types'
 export async function POST(request: Request) {
   try {
     const body: CreateTodoInput = await request.json()
-    const { weekId, content, dueDate } = body
+    const { weekId, content, dueDate, parentId } = body
 
     if (!weekId || !content || !dueDate) {
       return NextResponse.json(
@@ -36,11 +36,12 @@ export async function POST(request: Request) {
       )
     }
 
-    // Get the highest order value for this date
+    // Get the highest order value for this date and parent
     const lastTodo = await prisma.todo.findFirst({
       where: {
         weekId,
         dueDate: dueDateObj,
+        parentId: parentId || null,
       },
       orderBy: { order: 'desc' },
     })
@@ -53,6 +54,7 @@ export async function POST(request: Request) {
         content,
         dueDate: dueDateObj,
         order: newOrder,
+        parentId: parentId || null,
       },
     })
 

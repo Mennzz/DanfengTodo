@@ -5,11 +5,12 @@ import type { UpdateCategoryInput } from '@/types'
 // GET /api/categories/[id] - Get a single category
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const category = await prisma.category.findUnique({
-      where: { id: params.id },
+      where: { id },
     })
 
     if (!category) {
@@ -32,14 +33,15 @@ export async function GET(
 // PATCH /api/categories/[id] - Update a category
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const body: UpdateCategoryInput = await request.json()
     const { name, color, order } = body
 
     const category = await prisma.category.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         ...(name && { name }),
         ...(color && { color }),
@@ -60,12 +62,13 @@ export async function PATCH(
 // DELETE /api/categories/[id] - Delete a category
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     // Check if category is default
     const category = await prisma.category.findUnique({
-      where: { id: params.id },
+      where: { id },
     })
 
     if (category?.isDefault) {
@@ -76,7 +79,7 @@ export async function DELETE(
     }
 
     await prisma.category.delete({
-      where: { id: params.id },
+      where: { id },
     })
 
     return NextResponse.json({ success: true })

@@ -1,7 +1,7 @@
-import { Category, Week, Todo } from '@prisma/client'
+import { Category, Week, Todo, DayTag, WeekReflection } from '@prisma/client'
 
 // Re-export Prisma types
-export type { Category, Week, Todo }
+export type { Category, Week, Todo, DayTag, WeekReflection }
 
 // Extended types with relations
 export type CategoryWithWeeks = Category & {
@@ -17,11 +17,15 @@ export type TodoWithWeek = Todo & {
   week: Week
 }
 
+export type TodoWithSubtasks = Todo & {
+  subtasks: Todo[]
+}
+
 // Grouped todos by date for display
 export interface TodosByDate {
   date: string // ISO format: "2025-01-07"
   dateFormatted: string // Display format: "15 December [Mon]"
-  todos: Todo[]
+  todos: TodoWithSubtasks[]
 }
 
 // API request/response types
@@ -40,6 +44,7 @@ export interface CreateTodoInput {
   weekId: string
   content: string
   dueDate: string // ISO format
+  parentId?: string // Optional: for creating subtasks
 }
 
 export interface UpdateTodoInput {
@@ -51,6 +56,7 @@ export interface UpdateTodoInput {
 export interface GenerateWeeksInput {
   categoryId: string
   weeksAhead?: number
+  year?: number
 }
 
 export interface GenerateWeeksResponse {
@@ -69,4 +75,22 @@ export interface WeeksResponse {
 
 export interface TodosGroupedResponse {
   dates: TodosByDate[]
+}
+
+// Day tags types
+export type DayTagType = 'Weekend' | 'Vacation' | 'Sick'
+
+export interface CreateDayTagInput {
+  categoryId: string
+  date: string // ISO format
+  tag: DayTagType
+}
+
+export interface TodosByDateWithTag extends TodosByDate {
+  dayTag?: DayTag | null
+  isCollapsed?: boolean
+}
+
+export interface DayTagsResponse {
+  dayTags: DayTag[]
 }

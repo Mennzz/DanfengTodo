@@ -6,30 +6,96 @@ import { TodoProvider, useTodoContext } from '@/components/providers/TodoProvide
 import { CategoryPanel } from '@/components/panels/CategoryPanel'
 import { WeekPanel } from '@/components/panels/WeekPanel'
 import { TodoPanel } from '@/components/panels/TodoPanel'
+import { Menu, X } from 'lucide-react'
 
 function DashboardContent() {
   const searchParams = useSearchParams()
   const categoryId = searchParams.get('category')
+  const year = searchParams.get('year')
   const weekId = searchParams.get('week')
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [activePanel, setActivePanel] = useState<'categories' | 'weeks' | 'todos'>('todos')
 
   return (
-    <TodoProvider categoryId={categoryId} weekId={weekId}>
+    <TodoProvider categoryId={categoryId} year={year} weekId={weekId}>
       <AutoNavigate />
-      <div className="flex h-screen overflow-hidden bg-gray-200 dark:bg-gray-950">
-        {/* Left Panel: Categories */}
-        <aside className="w-64 flex-shrink-0 h-full overflow-y-auto border-r border-gray-300 dark:border-gray-800 shadow-sm">
-          <CategoryPanel />
-        </aside>
+      <div className="flex flex-col h-screen overflow-hidden bg-gray-50">
+        {/* Mobile Header */}
+        <div className="lg:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200">
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="p-2 rounded-md hover:bg-gray-100"
+            aria-label="Toggle menu"
+          >
+            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
+          <h1 className="text-lg font-semibold">Todo App</h1>
+          <div className="w-10" /> {/* Spacer for centering */}
+        </div>
 
-        {/* Middle Panel: Weeks */}
-        <aside className="w-60 flex-shrink-0 h-full overflow-y-auto border-r border-gray-300 dark:border-gray-800 shadow-sm">
-          <WeekPanel />
-        </aside>
+        {/* Mobile Navigation Tabs */}
+        <div className="lg:hidden flex bg-white border-b border-gray-200">
+          <button
+            onClick={() => setActivePanel('categories')}
+            className={`flex-1 px-4 py-3 text-sm font-medium ${
+              activePanel === 'categories'
+                ? 'border-b-2 border-primary text-primary'
+                : 'text-muted-foreground'
+            }`}
+          >
+            Categories
+          </button>
+          <button
+            onClick={() => setActivePanel('weeks')}
+            className={`flex-1 px-4 py-3 text-sm font-medium ${
+              activePanel === 'weeks'
+                ? 'border-b-2 border-primary text-primary'
+                : 'text-muted-foreground'
+            }`}
+          >
+            Weeks
+          </button>
+          <button
+            onClick={() => setActivePanel('todos')}
+            className={`flex-1 px-4 py-3 text-sm font-medium ${
+              activePanel === 'todos'
+                ? 'border-b-2 border-primary text-primary'
+                : 'text-muted-foreground'
+            }`}
+          >
+            Todos
+          </button>
+        </div>
 
-        {/* Right Panel: Todos */}
-        <main className="flex-1 h-full overflow-y-auto">
-          <TodoPanel />
-        </main>
+        {/* Desktop & Mobile Content */}
+        <div className="flex flex-1 overflow-hidden">
+          {/* Left Panel: Categories */}
+          <aside className={`
+            w-64 flex-shrink-0 h-full overflow-y-auto border-r border-gray-200 bg-white
+            lg:block
+            ${activePanel === 'categories' ? 'block' : 'hidden'}
+          `}>
+            <CategoryPanel />
+          </aside>
+
+          {/* Middle Panel: Weeks */}
+          <aside className={`
+            w-60 flex-shrink-0 h-full overflow-y-auto border-r border-gray-200 bg-white
+            lg:block
+            ${activePanel === 'weeks' ? 'block' : 'hidden'}
+          `}>
+            <WeekPanel />
+          </aside>
+
+          {/* Right Panel: Todos */}
+          <main className={`
+            flex-1 h-full overflow-y-auto
+            lg:block
+            ${activePanel === 'todos' ? 'block' : 'hidden'}
+          `}>
+            <TodoPanel />
+          </main>
+        </div>
       </div>
     </TodoProvider>
   )
@@ -41,6 +107,7 @@ function AutoNavigate() {
     categories,
     weeks,
     selectedCategory,
+    selectedYear,
     selectedWeek,
     selectCategory,
     selectWeek,
@@ -66,30 +133,35 @@ function AutoNavigate() {
   useEffect(() => {
     if (!selectedCategory || isLoadingWeeks) return
 
-    // Generate weeks if none exist
+    // Generate weeks for selected year if none exist
     if (weeks.length === 0) {
-      generateWeeks(selectedCategory.id)
+      generateWeeks(selectedCategory.id, selectedYear)
       return
     }
 
     // Auto-select current week or first week if none selected
     if (!selectedWeek && weeks.length > 0) {
-      // Find current week
       const now = new Date()
-      const currentWeek = weeks.find((week) => {
-        const start = new Date(week.startDate)
-        const end = new Date(week.endDate)
-        return now >= start && now <= end
-      })
+      const currentYear = now.getFullYear()
 
-      if (currentWeek) {
-        selectWeek(currentWeek.id)
-      } else {
-        // Select first week if no current week found
-        selectWeek(weeks[0].id)
+      // If selected year is current year, find current week
+      if (selectedYear === currentYear) {
+        const currentWeek = weeks.find((week) => {
+          const start = new Date(week.startDate)
+          const end = new Date(week.endDate)
+          return now >= start && now <= end
+        })
+
+        if (currentWeek) {
+          selectWeek(currentWeek.id)
+          return
+        }
       }
+
+      // Otherwise, select first week of the year
+      selectWeek(weeks[0].id)
     }
-  }, [selectedCategory, weeks, selectedWeek, selectWeek, generateWeeks, isLoadingWeeks])
+  }, [selectedCategory, selectedYear, weeks, selectedWeek, selectWeek, generateWeeks, isLoadingWeeks])
 
   return null
 }
@@ -98,8 +170,8 @@ export default function Home() {
   return (
     <Suspense
       fallback={
-        <div className="flex h-screen items-center justify-center bg-gray-100 dark:bg-gray-950">
-          <div className="text-gray-500 dark:text-gray-400">Loading...</div>
+        <div className="flex h-screen items-center justify-center bg-gray-50">
+          <div className="text-gray-400">Loading...</div>
         </div>
       }
     >

@@ -21,6 +21,7 @@ model Category {
 
   weeks     Week[]
   weekGenerationLogs WeekGenerationLog[]
+  dayTags   DayTag[]
 
   @@index([order])
 }
@@ -34,8 +35,9 @@ model Week {
   year       Int
   createdAt  DateTime @default(now())
 
-  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  category   Category       @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   todos      Todo[]
+  reflection WeekReflection?
 
   @@unique([categoryId, startDate])
   @@index([categoryId, startDate])
@@ -49,14 +51,18 @@ model Todo {
   completed   Boolean   @default(false)
   dueDate     DateTime
   order       Int       @default(0)
+  parentId    String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   completedAt DateTime?
 
   week        Week      @relation(fields: [weekId], references: [id], onDelete: Cascade)
+  parent      Todo?     @relation("TodoSubtasks", fields: [parentId], references: [id], onDelete: Cascade)
+  subtasks    Todo[]    @relation("TodoSubtasks")
 
   @@index([weekId, dueDate, order])
   @@index([completed])
+  @@index([parentId])
 }
 
 model WeekGenerationLog {
@@ -66,4 +72,30 @@ model WeekGenerationLog {
   weeksGenerated  Int      @default(0)
 
   category        Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+}
+
+model DayTag {
+  id         String   @id @default(cuid())
+  categoryId String
+  date       DateTime
+  tag        String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([categoryId, date])
+  @@index([categoryId, date])
+}
+
+model WeekReflection {
+  id        String   @id @default(cuid())
+  weekId    String   @unique
+  content   String   @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  week      Week     @relation(fields: [weekId], references: [id], onDelete: Cascade)
+
+  @@index([weekId])
 }

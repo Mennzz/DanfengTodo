@@ -6,12 +6,13 @@ import type { TodosByDate } from '@/types'
 // GET /api/weeks/[id]/todos - Get todos for a week, grouped by date
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     // Get the week
     const week = await prisma.week.findUnique({
-      where: { id: params.id },
+      where: { id },
     })
 
     if (!week) {
@@ -21,9 +22,17 @@ export async function GET(
       )
     }
 
-    // Get all todos for this week
+    // Get all todos for this week (only top-level, with subtasks included)
     const todos = await prisma.todo.findMany({
-      where: { weekId: params.id },
+      where: {
+        weekId: id,
+        parentId: null, // Only get top-level todos
+      },
+      include: {
+        subtasks: {
+          orderBy: { order: 'asc' },
+        },
+      },
       orderBy: [{ dueDate: 'asc' }, { order: 'asc' }],
     })
 

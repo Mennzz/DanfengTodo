@@ -5,9 +5,10 @@ import type { UpdateTodoInput } from '@/types'
 // PATCH /api/todos/[id] - Update a todo
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const body: UpdateTodoInput = await request.json()
     const { content, completed, order } = body
 
@@ -29,7 +30,7 @@ export async function PATCH(
     }
 
     const todo = await prisma.todo.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
     })
 
@@ -46,11 +47,12 @@ export async function PATCH(
 // DELETE /api/todos/[id] - Delete a todo
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     await prisma.todo.delete({
-      where: { id: params.id },
+      where: { id },
     })
 
     return NextResponse.json({ success: true })
