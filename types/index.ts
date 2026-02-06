@@ -1,7 +1,7 @@
-import { Category, Week, Todo, DayTag, WeekReflection } from '@prisma/client'
+import { Category, Week, Todo, DayTag, WeekReflection, DayNote } from '@prisma/client'
 
 // Re-export Prisma types
-export type { Category, Week, Todo, DayTag, WeekReflection }
+export type { Category, Week, Todo, DayTag, WeekReflection, DayNote }
 
 // Extended types with relations
 export type CategoryWithWeeks = Category & {
@@ -88,6 +88,7 @@ export interface CreateDayTagInput {
 
 export interface TodosByDateWithTag extends TodosByDate {
   dayTag?: DayTag | null
+  dayNote?: DayNote | null
   isCollapsed?: boolean
 }
 

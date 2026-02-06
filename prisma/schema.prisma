@@ -22,6 +22,7 @@ model Category {
   weeks     Week[]
   weekGenerationLogs WeekGenerationLog[]
   dayTags   DayTag[]
+  dayNotes  DayNote[]
 
   @@index([order])
 }
@@ -98,4 +99,18 @@ model WeekReflection {
   week      Week     @relation(fields: [weekId], references: [id], onDelete: Cascade)
 
   @@index([weekId])
+}
+
+model DayNote {
+  id         String   @id @default(cuid())
+  categoryId String
+  date       DateTime
+  content    String   @default("")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([categoryId, date])
+  @@index([categoryId, date])
 }

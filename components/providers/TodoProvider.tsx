@@ -42,6 +42,7 @@ interface TodoContextValue {
   isWorkDaily: boolean
   dayTags: DayTag[]
   collapsedDays: Set<string>
+  sidebarVisible: boolean
 
   // Loading states
   isLoadingCategories: boolean
@@ -64,6 +65,7 @@ interface TodoContextValue {
   deleteDayTag: (id: string) => Promise<void>
   toggleDayCollapse: (date: string) => void
   reorderTodos: (date: string, oldIndex: number, newIndex: number) => Promise<void>
+  toggleSidebar: () => void
 }
 
 const TodoContext = createContext<TodoContextValue | undefined>(undefined)
@@ -108,6 +110,25 @@ export function TodoProvider({ children, categoryId, year, weekId }: TodoProvide
 
   // Local state for collapsed days
   const [collapsedDays, setCollapsedDays] = useState<Set<string>>(new Set())
+
+  // Local state for sidebar visibility (with localStorage persistence)
+  const [sidebarVisible, setSidebarVisible] = useState(true)
+  const [isHydrated, setIsHydrated] = useState(false)
+
+  useEffect(() => {
+    // Initialize from localStorage on client side
+    const stored = localStorage.getItem('sidebarVisible')
+    setSidebarVisible(stored === null ? true : JSON.parse(stored))
+    setIsHydrated(true)
+  }, [])
+
+  const toggleSidebar = useCallback(() => {
+    setSidebarVisible((prev) => {
+      const newValue = !prev
+      localStorage.setItem('sidebarVisible', JSON.stringify(newValue))
+      return newValue
+    })
+  }, [])
 
   // Fetch weeks for selected category (or work category if combined)
   const { data: weeksData, isLoading: isLoadingWeeks } = useSWR(
@@ -185,6 +206,16 @@ export function TodoProvider({ children, categoryId, year, weekId }: TodoProvide
 
   const dayTags = dayTagsData?.dayTags || []
 
+  // Fetch day notes for selected category and week
+  const { data: dayNotesData } = useSWR(
+    selectedCategory && selectedWeek
+      ? `/api/categories/${selectedCategory.id}/day-notes?startDate=${selectedWeek.startDate}&endDate=${selectedWeek.endDate}`
+      : null,
+    fetcher
+  )
+
+  const dayNotes = dayNotesData?.dayNotes || []
+
   // Merge todos for combined view or with day tags for work daily
   const todos = useMemo(() => {
     if (isCombined) {
@@ -196,15 +227,28 @@ export function TodoProvider({ children, categoryId, year, weekId }: TodoProvide
       )
     }
 
-    const baseTodos = todosData?.dates || []
+    let result = todosData?.dates || []
 
     // Merge day tags for work daily category
     if (isWorkDaily && dayTags.length > 0) {
-      return mergeDayTags(baseTodos, dayTags)
+      result = mergeDayTags(result, dayTags)
     }
 
-    return baseTodos
-  }, [isCombined, isWorkDaily, workTodosData, personalTodosData, todosData, sourceCategories, dayTags])
+    // Merge day notes
+    if (dayNotes.length > 0) {
+      result = result.map((dateGroup) => {
+        const dayNote = dayNotes.find(
+          (note) => formatDateForAPI(new Date(note.date)) === dateGroup.date
+        )
+        return {
+          ...dateGroup,
+          dayNote: dayNote || null,
+        }
+      })
+    }
+
+    return result
+  }, [isCombined, isWorkDaily, workTodosData, personalTodosData, todosData, sourceCategories, dayTags, dayNotes])
 
   // Combined loading state
   const isLoadingWeeksActual = isCombined
@@ -546,6 +590,7 @@ export function TodoProvider({ children, categoryId, year, weekId }: TodoProvide
     isWorkDaily,
     dayTags,
     collapsedDays,
+    sidebarVisible,
     isLoadingCategories,
     isLoadingWeeks: isLoadingWeeksActual,
     isLoadingTodos: isLoadingTodosActual,
@@ -564,6 +609,7 @@ export function TodoProvider({ children, categoryId, year, weekId }: TodoProvide
     deleteDayTag,
     toggleDayCollapse,
     reorderTodos,
+    toggleSidebar,
   }
 
   return <TodoContext.Provider value={value}>{children}</TodoContext.Provider>

@@ -4,6 +4,11 @@ import type { Metadata, Viewport } from 'next'
 export const metadata: Metadata = {
   title: 'DanfengTodo',
   description: 'A todo list application with analytics',
+  icons: {
+    icon: '/favicon.svg',
+    shortcut: '/favicon.svg',
+    apple: '/apple-touch-icon.png',
+  },
 }
 
 export const viewport: Viewport = {

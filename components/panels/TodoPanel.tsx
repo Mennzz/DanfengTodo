@@ -22,6 +22,7 @@ import { TagSelector } from '../ui/TagSelector'
 import { DraggableTodoItem } from '../ui/DraggableTodoItem'
 import { TodoItem } from '../ui/TodoItem'
 import { ContextMenu } from '../ui/ContextMenu'
+import { DayNoteEditor } from '../ui/DayNoteEditor'
 import { WeeklyStats } from './WeeklyStats'
 import { WeekReflection } from './WeekReflection'
 import { Trash2, ChevronDown, ChevronRight, Plus } from 'lucide-react'
@@ -351,6 +352,16 @@ export function TodoPanel() {
                         </form>
                       </div>
                     </div>
+                  )}
+
+                  {/* Day Note Editor - Hidden in combined view */}
+                  {!isCombinedView && selectedCategory && (
+                    <DayNoteEditor
+                      date={dateGroup.date}
+                      categoryId={selectedCategory.id}
+                      initialContent={dateGroupWithTag.dayNote?.content || ''}
+                      disabled={false}
+                    />
                   )}
                 </CardContent>
               )}
