@@ -39,6 +39,7 @@ model Week {
   category   Category       @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   todos      Todo[]
   reflection WeekReflection?
+  plan       WeekPlan?
 
   @@unique([categoryId, startDate])
   @@index([categoryId, startDate])
@@ -113,4 +114,28 @@ model DayNote {
 
   @@unique([categoryId, date])
   @@index([categoryId, date])
+}
+
+model WeekPlan {
+  id        String     @id @default(cuid())
+  weekId    String     @unique
+  week      Week       @relation(fields: [weekId], references: [id], onDelete: Cascade)
+  mainGoal  String     @default("")
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  tasks     PlanTask[]
+}
+
+model PlanTask {
+  id          String    @id @default(cuid())
+  planId      String
+  plan        WeekPlan  @relation(fields: [planId], references: [id], onDelete: Cascade)
+  content     String
+  order       Int
+  assignedDay String?
+  todoId      String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([planId, order])
 }

@@ -1,7 +1,7 @@
-import { Category, Week, Todo, DayTag, WeekReflection, DayNote } from '@prisma/client'
+import { Category, Week, Todo, DayTag, WeekReflection, DayNote, WeekPlan, PlanTask } from '@prisma/client'
 
 // Re-export Prisma types
-export type { Category, Week, Todo, DayTag, WeekReflection, DayNote }
+export type { Category, Week, Todo, DayTag, WeekReflection, DayNote, WeekPlan, PlanTask }
 
 // Extended types with relations
 export type CategoryWithWeeks = Category & {
@@ -94,4 +94,26 @@ export interface TodosByDateWithTag extends TodosByDate {
 
 export interface DayTagsResponse {
   dayTags: DayTag[]
+}
+
+// Plan types
+export type WeekPlanWithTasks = WeekPlan & {
+  tasks: PlanTask[]
+}
+
+export interface CreatePlanTaskInput {
+  planId: string
+  content: string
+}
+
+export interface UpdatePlanTaskInput {
+  content?: string
+  order?: number
+  assignedDay?: string | null
+  todoId?: string | null
+}
+
+export interface AssignPlanTaskInput {
+  day: string // ISO date
+  weekId: string
 }

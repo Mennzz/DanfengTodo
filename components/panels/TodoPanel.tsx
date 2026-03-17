@@ -25,6 +25,7 @@ import { ContextMenu } from '../ui/ContextMenu'
 import { DayNoteEditor } from '../ui/DayNoteEditor'
 import { WeeklyStats } from './WeeklyStats'
 import { WeekReflection } from './WeekReflection'
+import { PlanPanel } from './PlanPanel'
 import { Trash2, ChevronDown, ChevronRight, Plus } from 'lucide-react'
 import { formatDateForAPI } from '@/lib/dateUtils'
 import type { TodosByDateWithTag, DayTagType, TodosByDate, TodoWithSubtasks } from '@/types'
@@ -47,6 +48,7 @@ export function TodoPanel() {
     toggleDayCollapse,
     reorderTodos,
   } = useTodoContext()
+  const [activeTab, setActiveTab] = useState<'todos' | 'plan'>('todos')
   const [newTodoContent, setNewTodoContent] = useState<{ [date: string]: string }>({})
   const [editingTodoId, setEditingTodoId] = useState<string | null>(null)
   const [editingContent, setEditingContent] = useState('')
@@ -240,7 +242,39 @@ export function TodoPanel() {
         </div>
       </div>
 
+      {/* Tab Bar */}
+      {!isCombinedView && (
+        <div className="flex border-b border-border bg-card px-4 sm:px-6 md:px-12">
+          <button
+            onClick={() => setActiveTab('todos')}
+            className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'todos'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            Todos
+          </button>
+          <button
+            onClick={() => setActiveTab('plan')}
+            className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'plan'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            Plan
+          </button>
+        </div>
+      )}
+
+      {/* Plan Panel */}
+      {activeTab === 'plan' && !isCombinedView && (
+        <PlanPanel weekId={selectedWeek.id} startDate={selectedWeek.startDate} />
+      )}
+
       {/* Content Area */}
+      {(activeTab === 'todos' || isCombinedView) && (
       <div className="px-4 sm:px-6 md:px-12 py-4 sm:py-6 md:py-8 space-y-4 sm:space-y-6">
         {todos.map((dateGroup) => {
           const dateGroupWithTag = dateGroup as TodosByDateWithTag
@@ -381,6 +415,7 @@ export function TodoPanel() {
           </>
         )}
       </div>
+      )}
 
       {/* Context Menu */}
       {contextMenu && (
