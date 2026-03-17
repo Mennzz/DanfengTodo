@@ -93,14 +93,14 @@ export function WeeklyStats({ todos }: WeeklyStatsProps) {
                     border: '1px solid hsl(var(--border))',
                     borderRadius: '6px',
                   }}
-                  formatter={(value: number, name: string, props: any) => {
+                  formatter={(value: number | undefined, name: string | undefined, props: any) => {
                     if (name === 'completionRate') {
                       return [
                         `${value}% (${props.payload.completed}/${props.payload.total})`,
                         'Completion',
-                      ]
+                      ] as [string, string]
                     }
-                    return [value, name]
+                    return [value, name] as [number | undefined, string]
                   }}
                 />
                 <Line

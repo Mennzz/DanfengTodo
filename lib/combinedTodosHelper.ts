@@ -1,7 +1,7 @@
-import type { Category, Week, Todo, TodosByDate } from '@/types'
+import type { Category, Week, TodoWithSubtasks, TodosByDate } from '@/types'
 import { formatDateHeader, parseAPIDate } from './dateUtils'
 
-export interface TodoWithCategory extends Todo {
+export interface TodoWithCategory extends TodoWithSubtasks {
   categoryName?: string
   categoryColor?: string
 }

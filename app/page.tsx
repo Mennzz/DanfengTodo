@@ -51,7 +51,7 @@ function DashboardLayout() {
               {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
           </div>
-          <h1 className="text-lg font-semibold">Todo App</h1>
+          <h1 className="text-lg font-semibold">Danfeng Todo</h1>
           <div className="w-10" /> {/* Spacer for centering */}
         </div>
 

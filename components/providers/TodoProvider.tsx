@@ -12,6 +12,7 @@ import type {
   CreateCategoryInput,
   UpdateCategoryInput,
   DayTag,
+  DayNote,
   CreateDayTagInput,
   TodosByDateWithTag,
 } from '@/types'
@@ -204,7 +205,7 @@ export function TodoProvider({ children, categoryId, year, weekId }: TodoProvide
     fetcher
   )
 
-  const dayTags = dayTagsData?.dayTags || []
+  const dayTags: DayTag[] = dayTagsData?.dayTags || []
 
   // Fetch day notes for selected category and week
   const { data: dayNotesData } = useSWR(
@@ -214,7 +215,7 @@ export function TodoProvider({ children, categoryId, year, weekId }: TodoProvide
     fetcher
   )
 
-  const dayNotes = dayNotesData?.dayNotes || []
+  const dayNotes: DayNote[] = dayNotesData?.dayNotes || []
 
   // Merge todos for combined view or with day tags for work daily
   const todos = useMemo(() => {
@@ -227,7 +228,7 @@ export function TodoProvider({ children, categoryId, year, weekId }: TodoProvide
       )
     }
 
-    let result = todosData?.dates || []
+    let result: TodosByDateWithTag[] = todosData?.dates || []
 
     // Merge day tags for work daily category
     if (isWorkDaily && dayTags.length > 0) {
