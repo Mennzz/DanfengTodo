@@ -127,6 +127,9 @@ export function DayNoteEditor({ date, categoryId, initialContent = '', disabled 
         suppressContentEditableWarning
         onBlur={handleSave}
         onKeyDown={handleKeyDown}
+        data-gramm="false"
+        data-gramm_editor="false"
+        data-enable-grammarly="false"
         data-placeholder="Add notes for this day..."
         className="day-note-editor w-full min-h-[80px] px-3 py-2 text-sm border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground"
       />
