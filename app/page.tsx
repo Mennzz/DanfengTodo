@@ -6,7 +6,9 @@ import { TodoProvider, useTodoContext } from '@/components/providers/TodoProvide
 import { CategoryPanel } from '@/components/panels/CategoryPanel'
 import { WeekPanel } from '@/components/panels/WeekPanel'
 import { TodoPanel } from '@/components/panels/TodoPanel'
-import { Menu, X, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Menu, X, ChevronLeft, ChevronRight, LogOut } from 'lucide-react'
+import { useSession, signOut } from 'next-auth/react'
+import { UserProfileModal } from '@/components/modals/UserProfileModal'
 
 function DashboardContent() {
   const searchParams = useSearchParams()
@@ -24,7 +26,9 @@ function DashboardContent() {
 function DashboardLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [activePanel, setActivePanel] = useState<'categories' | 'weeks' | 'todos'>('todos')
+  const [profileOpen, setProfileOpen] = useState(false)
   const { sidebarVisible, toggleSidebar } = useTodoContext()
+  const { data: session } = useSession()
 
   return (
     <>
@@ -52,7 +56,23 @@ function DashboardLayout() {
             </button>
           </div>
           <h1 className="text-lg font-semibold">Mood Todo</h1>
-          <div className="w-10" /> {/* Spacer for centering */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setProfileOpen(true)}
+              className="hidden sm:block px-2 py-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-gray-100 transition-colors"
+              title="Account settings"
+            >
+              {session?.user.name ?? session?.user.email}
+            </button>
+            <button
+              onClick={() => signOut({ callbackUrl: '/login' })}
+              className="p-2 rounded-md hover:bg-gray-100 text-muted-foreground hover:text-foreground transition-colors"
+              title="Sign out"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
+          <UserProfileModal isOpen={profileOpen} onClose={() => setProfileOpen(false)} />
         </div>
 
         {/* Mobile Navigation Tabs */}

@@ -1,12 +1,15 @@
 'use client'
 
 import React, { useState } from 'react'
+import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 import { useTodoContext } from '../providers/TodoProvider'
 import { Button } from '../ui/Button'
 import { Modal } from '../ui/Modal'
 import { cn } from '@/lib/utils'
-import { Edit2, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Edit2, ChevronLeft, ChevronRight, Users, Share2 } from 'lucide-react'
 import { EditCategoryModal } from '../modals/EditCategoryModal'
+import { ShareCategoryModal } from '../modals/ShareCategoryModal'
 import type { Category } from '@/types'
 
 export function CategoryPanel() {
@@ -20,12 +23,17 @@ export function CategoryPanel() {
     updateCategory,
     isLoadingCategories,
   } = useTodoContext()
+  const { data: session } = useSession()
+  const router = useRouter()
+  const isAdmin = session?.user.role === 'ADMIN'
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [newCategoryName, setNewCategoryName] = useState('')
   const [newCategoryColor, setNewCategoryColor] = useState('#3B82F6')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [editingCategory, setEditingCategory] = useState<Category | null>(null)
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false)
+  const [sharingCategory, setSharingCategory] = useState<Category | null>(null)
 
   const handleAddCategory = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -51,6 +59,12 @@ export function CategoryPanel() {
     e.stopPropagation()
     setEditingCategory(category)
     setIsEditModalOpen(true)
+  }
+
+  const handleShareCategory = (category: Category, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setSharingCategory(category)
+    setIsShareModalOpen(true)
   }
 
   const handlePrevYear = () => {
@@ -124,6 +138,14 @@ export function CategoryPanel() {
                 {category.name}
               </span>
 
+              {/* Share icon - visible on hover, owner or admin only */}
+              {(isAdmin || session?.user.id === category.ownerId) && (
+                <Share2
+                  className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={(e) => handleShareCategory(category, e)}
+                />
+              )}
+
               {/* Edit icon - visible on hover */}
               <Edit2
                 className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
@@ -144,6 +166,23 @@ export function CategoryPanel() {
           + Add Category
         </Button>
       </div>
+
+      {/* Admin Section */}
+      {isAdmin && (
+        <div className="px-4 pb-4 border-t pt-3">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 px-1">
+            Admin
+          </p>
+          <button
+            onClick={() => router.push('/admin/users')}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+          >
+            <Users className="w-4 h-4" />
+            Users
+          </button>
+        </div>
+      )}
+
 
       {/* Add Category Modal */}
       <Modal
@@ -200,6 +239,13 @@ export function CategoryPanel() {
         onClose={() => setIsEditModalOpen(false)}
         category={editingCategory}
         onSave={updateCategory}
+      />
+
+      {/* Share Category Modal */}
+      <ShareCategoryModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        category={sharingCategory}
       />
     </div>
   )

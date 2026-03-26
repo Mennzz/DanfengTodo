@@ -1,11 +1,19 @@
 import { NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth/next'
+import { authOptions, getCategoryFilter } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import type { CreateCategoryInput } from '@/types'
 
-// GET /api/categories - Get all categories
+// GET /api/categories - Get all categories visible to the current user
 export async function GET() {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const categories = await prisma.category.findMany({
+      where: getCategoryFilter(session.user.id, session.user.role),
       orderBy: { order: 'asc' },
     })
 
@@ -19,9 +27,14 @@ export async function GET() {
   }
 }
 
-// POST /api/categories - Create a new category
+// POST /api/categories - Create a new category owned by the current user
 export async function POST(request: Request) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const body: CreateCategoryInput = await request.json()
     const { name, color = '#3B82F6' } = body
 
@@ -32,7 +45,6 @@ export async function POST(request: Request) {
       )
     }
 
-    // Get the highest order value
     const lastCategory = await prisma.category.findFirst({
       orderBy: { order: 'desc' },
     })
@@ -45,6 +57,7 @@ export async function POST(request: Request) {
         color,
         order: newOrder,
         isDefault: false,
+        ownerId: session.user.id,
       },
     })
 

@@ -1,8 +1,16 @@
 import { NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth/next'
+import { authOptions } from '@/lib/auth'
+import { getAccessiblePlan } from '@/lib/access'
 import { prisma } from '@/lib/prisma'
 
 export async function POST(request: Request) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const body = await request.json()
     const { planId, content } = body
 
@@ -11,6 +19,11 @@ export async function POST(request: Request) {
     }
     if (!content || typeof content !== 'string') {
       return NextResponse.json({ error: 'Missing content' }, { status: 400 })
+    }
+
+    const plan = await getAccessiblePlan(planId, session.user.id, session.user.role)
+    if (!plan) {
+      return NextResponse.json({ error: 'Plan not found' }, { status: 404 })
     }
 
     // Get the current max order for this plan

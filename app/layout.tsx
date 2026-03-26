@@ -1,5 +1,6 @@
 import './globals.css'
 import type { Metadata, Viewport } from 'next'
+import SessionProvider from '@/components/providers/SessionProvider'
 
 export const metadata: Metadata = {
   title: 'DanfengTodo',
@@ -25,7 +26,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="overflow-hidden">{children}</body>
+      <body className="overflow-hidden">
+        <SessionProvider>{children}</SessionProvider>
+      </body>
     </html>
   )
 }

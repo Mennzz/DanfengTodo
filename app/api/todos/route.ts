@@ -1,10 +1,17 @@
 import { NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth/next'
+import { authOptions } from '@/lib/auth'
+import { getAccessibleWeek } from '@/lib/access'
 import { prisma } from '@/lib/prisma'
 import type { CreateTodoInput } from '@/types'
 
-// POST /api/todos - Create a new todo
 export async function POST(request: Request) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const body: CreateTodoInput = await request.json()
     const { weekId, content, dueDate, parentId } = body
 
@@ -15,19 +22,11 @@ export async function POST(request: Request) {
       )
     }
 
-    // Verify week exists
-    const week = await prisma.week.findUnique({
-      where: { id: weekId },
-    })
-
+    const week = await getAccessibleWeek(weekId, session.user.id, session.user.role)
     if (!week) {
-      return NextResponse.json(
-        { error: 'Week not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Week not found' }, { status: 404 })
     }
 
-    // Validate dueDate is within week range
     const dueDateObj = new Date(dueDate)
     if (dueDateObj < week.startDate || dueDateObj > week.endDate) {
       return NextResponse.json(
@@ -36,24 +35,17 @@ export async function POST(request: Request) {
       )
     }
 
-    // Get the highest order value for this date and parent
     const lastTodo = await prisma.todo.findFirst({
-      where: {
-        weekId,
-        dueDate: dueDateObj,
-        parentId: parentId || null,
-      },
+      where: { weekId, dueDate: dueDateObj, parentId: parentId || null },
       orderBy: { order: 'desc' },
     })
-
-    const newOrder = (lastTodo?.order ?? -1) + 1
 
     const todo = await prisma.todo.create({
       data: {
         weekId,
         content,
         dueDate: dueDateObj,
-        order: newOrder,
+        order: (lastTodo?.order ?? -1) + 1,
         parentId: parentId || null,
       },
     })
@@ -61,9 +53,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ todo }, { status: 201 })
   } catch (error) {
     console.error('Error creating todo:', error)
-    return NextResponse.json(
-      { error: 'Failed to create todo' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to create todo' }, { status: 500 })
   }
 }

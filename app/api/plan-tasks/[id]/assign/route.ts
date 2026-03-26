@@ -1,4 +1,7 @@
 import { NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth/next'
+import { authOptions } from '@/lib/auth'
+import { getAccessiblePlanTask, getAccessibleWeek } from '@/lib/access'
 import { prisma } from '@/lib/prisma'
 
 export async function POST(
@@ -6,6 +9,11 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const { id } = await params
     const body = await request.json()
     const { day, weekId } = body
@@ -17,13 +25,16 @@ export async function POST(
       return NextResponse.json({ error: 'Missing weekId' }, { status: 400 })
     }
 
-    const planTask = await prisma.planTask.findUnique({
-      where: { id },
-      select: { content: true, todoId: true },
-    })
+    const [planTask, week] = await Promise.all([
+      getAccessiblePlanTask(id, session.user.id, session.user.role),
+      getAccessibleWeek(weekId, session.user.id, session.user.role),
+    ])
 
     if (!planTask) {
       return NextResponse.json({ error: 'Plan task not found' }, { status: 404 })
+    }
+    if (!week) {
+      return NextResponse.json({ error: 'Week not found' }, { status: 404 })
     }
 
     // If already assigned, delete the old todo first
@@ -79,13 +90,13 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const { id } = await params
-
-    const planTask = await prisma.planTask.findUnique({
-      where: { id },
-      select: { todoId: true },
-    })
-
+    const planTask = await getAccessiblePlanTask(id, session.user.id, session.user.role)
     if (!planTask) {
       return NextResponse.json({ error: 'Plan task not found' }, { status: 404 })
     }

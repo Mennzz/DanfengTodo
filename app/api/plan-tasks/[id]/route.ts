@@ -1,4 +1,7 @@
 import { NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth/next'
+import { authOptions } from '@/lib/auth'
+import { getAccessiblePlanTask } from '@/lib/access'
 import { prisma } from '@/lib/prisma'
 
 export async function PATCH(
@@ -6,7 +9,17 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const { id } = await params
+    const existing = await getAccessiblePlanTask(id, session.user.id, session.user.role)
+    if (!existing) {
+      return NextResponse.json({ error: 'Task not found' }, { status: 404 })
+    }
+
     const body = await request.json()
     const { content, order, assignedDay, todoId } = body
 
@@ -36,21 +49,20 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const { id } = await params
-
-    // Get the task first to check if it has a linked todo
-    const task = await prisma.planTask.findUnique({
-      where: { id },
-      select: { todoId: true },
-    })
-
-    if (!task) {
+    const existing = await getAccessiblePlanTask(id, session.user.id, session.user.role)
+    if (!existing) {
       return NextResponse.json({ error: 'Task not found' }, { status: 404 })
     }
 
     // Delete the linked todo if it exists
-    if (task.todoId) {
-      await prisma.todo.deleteMany({ where: { id: task.todoId } })
+    if (existing.todoId) {
+      await prisma.todo.deleteMany({ where: { id: existing.todoId } })
     }
 
     await prisma.planTask.delete({ where: { id } })

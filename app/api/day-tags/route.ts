@@ -1,8 +1,16 @@
 import { NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth/next'
+import { authOptions } from '@/lib/auth'
+import { getAccessibleCategory } from '@/lib/access'
 import { prisma } from '@/lib/prisma'
 
 export async function POST(request: Request) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const body = await request.json()
     const { categoryId, date, tag } = body
 
@@ -23,6 +31,11 @@ export async function POST(request: Request) {
       )
     }
 
+    const category = await getAccessibleCategory(categoryId, session.user.id, session.user.role)
+    if (!category) {
+      return NextResponse.json({ error: 'Category not found' }, { status: 404 })
+    }
+
     // Upsert (create or update) the day tag
     const dayTag = await prisma.dayTag.upsert({
       where: {
@@ -31,9 +44,7 @@ export async function POST(request: Request) {
           date: new Date(date),
         },
       },
-      update: {
-        tag,
-      },
+      update: { tag },
       create: {
         categoryId,
         date: new Date(date),

@@ -1,4 +1,7 @@
 import { NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth/next'
+import { authOptions } from '@/lib/auth'
+import { getAccessibleCategory } from '@/lib/access'
 import { prisma } from '@/lib/prisma'
 
 export async function GET(
@@ -6,17 +9,23 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const { id } = await params
+    const category = await getAccessibleCategory(id, session.user.id, session.user.role)
+    if (!category) {
+      return NextResponse.json({ error: 'Category not found' }, { status: 404 })
+    }
+
     const { searchParams } = new URL(request.url)
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
 
-    // Build the where clause
-    const where: any = {
-      categoryId: id,
-    }
+    const where: Record<string, unknown> = { categoryId: id }
 
-    // Add date range filter if provided
     if (startDate && endDate) {
       where.date = {
         gte: new Date(startDate),

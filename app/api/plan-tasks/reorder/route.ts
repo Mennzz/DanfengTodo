@@ -1,4 +1,7 @@
 import { NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth/next'
+import { authOptions } from '@/lib/auth'
+import { verifyAllPlanTasksAccessible } from '@/lib/access'
 import { prisma } from '@/lib/prisma'
 
 interface ReorderUpdate {
@@ -8,6 +11,11 @@ interface ReorderUpdate {
 
 export async function POST(request: Request) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const body = await request.json()
     const { updates } = body as { updates: ReorderUpdate[] }
 
@@ -16,6 +24,12 @@ export async function POST(request: Request) {
         { error: 'Missing or invalid updates array' },
         { status: 400 }
       )
+    }
+
+    const ids = updates.map((u) => u.id)
+    const allAccessible = await verifyAllPlanTasksAccessible(ids, session.user.id, session.user.role)
+    if (!allAccessible) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     await prisma.$transaction(

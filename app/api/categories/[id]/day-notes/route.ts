@@ -1,4 +1,7 @@
 import { NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth/next'
+import { authOptions } from '@/lib/auth'
+import { getAccessibleCategory } from '@/lib/access'
 import { prisma } from '@/lib/prisma'
 
 // GET /api/categories/[id]/day-notes - Get day notes for a category within a date range
@@ -7,7 +10,17 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const { id } = await params
+    const category = await getAccessibleCategory(id, session.user.id, session.user.role)
+    if (!category) {
+      return NextResponse.json({ error: 'Category not found' }, { status: 404 })
+    }
+
     const { searchParams } = new URL(request.url)
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
@@ -46,7 +59,17 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const { id } = await params
+    const category = await getAccessibleCategory(id, session.user.id, session.user.role)
+    if (!category) {
+      return NextResponse.json({ error: 'Category not found' }, { status: 404 })
+    }
+
     const body = await request.json()
     const { date, content } = body
 
@@ -64,9 +87,7 @@ export async function POST(
           date: new Date(date),
         },
       },
-      update: {
-        content,
-      },
+      update: { content },
       create: {
         categoryId: id,
         date: new Date(date),

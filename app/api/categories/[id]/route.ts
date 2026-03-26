@@ -1,23 +1,42 @@
 import { NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth/next'
+import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { Role } from '@prisma/client'
 import type { UpdateCategoryInput } from '@/types'
 
-// GET /api/categories/[id] - Get a single category
+async function getAccessibleCategory(id: string, userId: string, role: Role) {
+  const category = await prisma.category.findUnique({
+    where: { id },
+    include: { shares: { select: { userId: true } } },
+  })
+
+  if (!category) return null
+
+  const hasAccess =
+    role === Role.ADMIN ||
+    category.ownerId === userId ||
+    category.shares.some((s) => s.userId === userId)
+
+  return hasAccess ? category : null
+}
+
+// GET /api/categories/[id]
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const { id } = await params
-    const category = await prisma.category.findUnique({
-      where: { id },
-    })
+    const category = await getAccessibleCategory(id, session.user.id, session.user.role)
 
     if (!category) {
-      return NextResponse.json(
-        { error: 'Category not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Category not found' }, { status: 404 })
     }
 
     return NextResponse.json({ category })
@@ -30,13 +49,24 @@ export async function GET(
   }
 }
 
-// PATCH /api/categories/[id] - Update a category
+// PATCH /api/categories/[id]
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const { id } = await params
+    const existing = await getAccessibleCategory(id, session.user.id, session.user.role)
+
+    if (!existing) {
+      return NextResponse.json({ error: 'Category not found' }, { status: 404 })
+    }
+
     const body: UpdateCategoryInput = await request.json()
     const { name, color, order } = body
 
@@ -59,28 +89,42 @@ export async function PATCH(
   }
 }
 
-// DELETE /api/categories/[id] - Delete a category
+// DELETE /api/categories/[id] - only owner or admin
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params
-    // Check if category is default
-    const category = await prisma.category.findUnique({
-      where: { id },
-    })
+    const session = await getServerSession(authOptions)
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
 
-    if (category?.isDefault) {
+    const { id } = await params
+    const category = await getAccessibleCategory(id, session.user.id, session.user.role)
+
+    if (!category) {
+      return NextResponse.json({ error: 'Category not found' }, { status: 404 })
+    }
+
+    const canDelete =
+      session.user.role === Role.ADMIN || category.ownerId === session.user.id
+
+    if (!canDelete) {
+      return NextResponse.json(
+        { error: 'Only the owner can delete this category' },
+        { status: 403 }
+      )
+    }
+
+    if (category.isDefault) {
       return NextResponse.json(
         { error: 'Cannot delete default categories' },
         { status: 403 }
       )
     }
 
-    await prisma.category.delete({
-      where: { id },
-    })
+    await prisma.category.delete({ where: { id } })
 
     return NextResponse.json({ success: true })
   } catch (error) {

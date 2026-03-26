@@ -1,4 +1,7 @@
 import { NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth/next'
+import { authOptions } from '@/lib/auth'
+import { getAccessibleDayTag } from '@/lib/access'
 import { prisma } from '@/lib/prisma'
 
 export async function DELETE(
@@ -6,11 +9,18 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params
+    const session = await getServerSession(authOptions)
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
 
-    await prisma.dayTag.delete({
-      where: { id },
-    })
+    const { id } = await params
+    const existing = await getAccessibleDayTag(id, session.user.id, session.user.role)
+    if (!existing) {
+      return NextResponse.json({ error: 'Day tag not found' }, { status: 404 })
+    }
+
+    await prisma.dayTag.delete({ where: { id } })
 
     return NextResponse.json({ success: true })
   } catch (error) {
