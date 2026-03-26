@@ -3,14 +3,105 @@
 import React, { useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable'
+import { arrayMove } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { useTodoContext } from '../providers/TodoProvider'
 import { Button } from '../ui/Button'
 import { Modal } from '../ui/Modal'
 import { cn } from '@/lib/utils'
-import { Edit2, ChevronLeft, ChevronRight, Users, Share2 } from 'lucide-react'
+import { Edit2, ChevronLeft, ChevronRight, Users, Share2, GripVertical } from 'lucide-react'
 import { EditCategoryModal } from '../modals/EditCategoryModal'
 import { ShareCategoryModal } from '../modals/ShareCategoryModal'
 import type { Category } from '@/types'
+
+function SortableCategoryItem({
+  category,
+  isSelected,
+  isAdmin,
+  userId,
+  onSelect,
+  onEdit,
+  onShare,
+}: {
+  category: Category
+  isSelected: boolean
+  isAdmin: boolean
+  userId?: string
+  onSelect: () => void
+  onEdit: (e: React.MouseEvent) => void
+  onShare: (e: React.MouseEvent) => void
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: category.id,
+  })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  }
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      <button
+        onClick={onSelect}
+        className={cn(
+          'w-full px-4 py-3 mb-1 text-left transition-all rounded-md',
+          'flex items-center gap-3 relative group',
+          isSelected ? 'bg-accent' : 'hover:bg-accent/50'
+        )}
+      >
+        {/* Colored indicator */}
+        <div
+          className="w-1 h-8 rounded-full absolute left-0"
+          style={{ backgroundColor: category.color }}
+        />
+
+        {/* Drag handle */}
+        <div
+          {...attributes}
+          {...listeners}
+          className="ml-3 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity touch-none"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <GripVertical className="w-3 h-3 text-muted-foreground" />
+        </div>
+
+        {/* Category name */}
+        <span className="text-sm text-foreground flex-1">{category.name}</span>
+
+        {/* Share icon */}
+        {(isAdmin || userId === category.ownerId) && (
+          <Share2
+            className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={onShare}
+          />
+        )}
+
+        {/* Edit icon */}
+        <Edit2
+          className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+          onClick={onEdit}
+        />
+      </button>
+    </div>
+  )
+}
 
 export function CategoryPanel() {
   const {
@@ -21,11 +112,27 @@ export function CategoryPanel() {
     selectYear,
     addCategory,
     updateCategory,
+    reorderCategories,
     isLoadingCategories,
   } = useTodoContext()
   const { data: session } = useSession()
   const router = useRouter()
   const isAdmin = session?.user.role === 'ADMIN'
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  )
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+    const oldIndex = categories.findIndex((c) => c.id === active.id)
+    const newIndex = categories.findIndex((c) => c.id === over.id)
+    const reordered = arrayMove(categories, oldIndex, newIndex)
+    reorderCategories(reordered.map((c) => c.id))
+  }
+
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [newCategoryName, setNewCategoryName] = useState('')
   const [newCategoryColor, setNewCategoryColor] = useState('#3B82F6')
@@ -112,48 +219,22 @@ export function CategoryPanel() {
 
       {/* Category List */}
       <div className="flex-1 overflow-y-auto px-3 py-4">
-        {categories.map((category) => {
-          const isSelected = selectedCategory?.id === category.id
-
-          return (
-            <button
-              key={category.id}
-              onClick={() => selectCategory(category.id)}
-              className={cn(
-                "w-full px-4 py-3 mb-1 text-left transition-all rounded-md",
-                "flex items-center gap-3 relative group",
-                isSelected
-                  ? 'bg-accent'
-                  : 'hover:bg-accent/50'
-              )}
-            >
-              {/* Colored indicator */}
-              <div
-                className="w-1 h-8 rounded-full absolute left-0"
-                style={{ backgroundColor: category.color }}
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={categories.map((c) => c.id)} strategy={verticalListSortingStrategy}>
+            {categories.map((category) => (
+              <SortableCategoryItem
+                key={category.id}
+                category={category}
+                isSelected={selectedCategory?.id === category.id}
+                isAdmin={isAdmin}
+                userId={session?.user.id}
+                onSelect={() => selectCategory(category.id)}
+                onEdit={(e) => handleEditCategory(category, e)}
+                onShare={(e) => handleShareCategory(category, e)}
               />
-
-              {/* Category name */}
-              <span className="text-sm text-foreground ml-3 flex-1">
-                {category.name}
-              </span>
-
-              {/* Share icon - visible on hover, owner or admin only */}
-              {(isAdmin || session?.user.id === category.ownerId) && (
-                <Share2
-                  className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
-                  onClick={(e) => handleShareCategory(category, e)}
-                />
-              )}
-
-              {/* Edit icon - visible on hover */}
-              <Edit2
-                className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
-                onClick={(e) => handleEditCategory(category, e)}
-              />
-            </button>
-          )
-        })}
+            ))}
+          </SortableContext>
+        </DndContext>
       </div>
 
       {/* Add Category Button */}

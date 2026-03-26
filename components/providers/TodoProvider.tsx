@@ -66,6 +66,7 @@ interface TodoContextValue {
   deleteDayTag: (id: string) => Promise<void>
   toggleDayCollapse: (date: string) => void
   reorderTodos: (date: string, oldIndex: number, newIndex: number) => Promise<void>
+  reorderCategories: (ids: string[]) => Promise<void>
   toggleSidebar: () => void
 }
 
@@ -322,6 +323,35 @@ export function TodoProvider({ children, categoryId, year, weekId }: TodoProvide
 
     // Revalidate categories
     await mutate('/api/categories')
+  }, [])
+
+  const reorderCategories = useCallback(async (ids: string[]) => {
+    // Optimistic update
+    await mutate(
+      '/api/categories',
+      (current: any) => {
+        if (!current?.categories) return current
+        const idOrder = new Map(ids.map((id, i) => [id, i]))
+        const sorted = [...current.categories].sort(
+          (a: Category, b: Category) =>
+            (idOrder.get(a.id) ?? 0) - (idOrder.get(b.id) ?? 0)
+        )
+        return { ...current, categories: sorted }
+      },
+      { revalidate: false }
+    )
+
+    try {
+      const res = await fetch('/api/categories/reorder', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids }),
+      })
+      if (!res.ok) throw new Error('Failed to reorder')
+    } catch (error) {
+      console.error('Failed to reorder categories:', error)
+      await mutate('/api/categories')
+    }
   }, [])
 
   const addTodo = useCallback(
@@ -610,6 +640,7 @@ export function TodoProvider({ children, categoryId, year, weekId }: TodoProvide
     deleteDayTag,
     toggleDayCollapse,
     reorderTodos,
+    reorderCategories,
     toggleSidebar,
   }
 

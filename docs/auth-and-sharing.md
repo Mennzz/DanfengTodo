@@ -234,7 +234,6 @@ The migration (`20260319154737_add_users_and_sharing`) seeds one admin user:
 | Field    | Value                      |
 |----------|----------------------------|
 | Email    | `admin@danfengtodo.com`    |
-| Password | `password` (change before deploying) |
 | Role     | `ADMIN`                    |
 
 To update the password, run `npx prisma db seed` after deleting the existing admin row, or update it directly via Prisma Studio (`npx prisma studio`).
