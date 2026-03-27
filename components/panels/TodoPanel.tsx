@@ -57,7 +57,7 @@ export function TodoPanel() {
     const todayStr = formatDateForAPI(new Date())
     const el = contentRef.current.querySelector<HTMLElement>(`[data-date="${todayStr}"]`)
     el?.scrollIntoView({ block: 'start', behavior: 'smooth' })
-  }, [todos])
+  }, [selectedWeek])
   const [newTodoContent, setNewTodoContent] = useState<{ [date: string]: string }>({})
   const [editingTodoId, setEditingTodoId] = useState<string | null>(null)
   const [editingContent, setEditingContent] = useState('')
