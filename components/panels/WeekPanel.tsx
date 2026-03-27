@@ -1,13 +1,27 @@
 'use client'
 
-import React from 'react'
+import React, { useRef, useEffect } from 'react'
 import { useTodoContext } from '../providers/TodoProvider'
 import { formatWeekDisplay } from '@/lib/dateUtils'
 import { cn } from '@/lib/utils'
 
-export function WeekPanel() {
+export function WeekPanel({ onSelect }: { onSelect?: () => void } = {}) {
   const { weeks, selectedWeek, selectWeek, selectedCategory, selectedYear, isLoadingWeeks } =
     useTodoContext()
+  const listRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!listRef.current) return
+    const t = new Date()
+    const todayStr = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`
+    const buttons = listRef.current.querySelectorAll<HTMLElement>('[data-week-start][data-week-end]')
+    for (const btn of buttons) {
+      if (todayStr >= btn.dataset.weekStart! && todayStr <= btn.dataset.weekEnd!) {
+        btn.scrollIntoView({ block: 'center', behavior: 'smooth' })
+        break
+      }
+    }
+  }, [weeks])
 
   if (!selectedCategory) {
     return (
@@ -49,14 +63,16 @@ export function WeekPanel() {
       </div>
 
       {/* Week List */}
-      <div className="flex-1 overflow-y-auto px-3 py-4">
+      <div ref={listRef} className="flex-1 overflow-y-auto px-3 py-4">
         {weeks.map((week) => {
           const isSelected = selectedWeek?.id === week.id
 
           return (
             <button
               key={week.id}
-              onClick={() => selectWeek(week.id)}
+              data-week-start={week.startDate.toString().slice(0, 10)}
+              data-week-end={week.endDate.toString().slice(0, 10)}
+              onClick={() => { selectWeek(week.id); onSelect?.() }}
               className={cn(
                 "w-full px-4 py-3 mb-1 text-left transition-all rounded-md",
                 isSelected

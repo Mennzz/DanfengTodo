@@ -103,7 +103,7 @@ function SortableCategoryItem({
   )
 }
 
-export function CategoryPanel() {
+export function CategoryPanel({ onSelect }: { onSelect?: () => void } = {}) {
   const {
     categories,
     selectedCategory,
@@ -228,7 +228,7 @@ export function CategoryPanel() {
                 isSelected={selectedCategory?.id === category.id}
                 isAdmin={isAdmin}
                 userId={session?.user.id}
-                onSelect={() => selectCategory(category.id)}
+                onSelect={() => { selectCategory(category.id); onSelect?.() }}
                 onEdit={(e) => handleEditCategory(category, e)}
                 onShare={(e) => handleShareCategory(category, e)}
               />

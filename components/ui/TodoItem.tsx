@@ -46,7 +46,7 @@ export function TodoItem({
           disabled={isCombinedView}
           onContextMenu={(e) => onContextMenu(e, todo)}
         >
-          <div className="pt-1">
+          <div className="flex items-center">
             <Checkbox
               checked={todo.completed}
               onCheckedChange={() => onToggle(todo.id, todo.completed)}

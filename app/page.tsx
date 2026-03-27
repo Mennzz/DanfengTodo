@@ -6,7 +6,7 @@ import { TodoProvider, useTodoContext } from '@/components/providers/TodoProvide
 import { CategoryPanel } from '@/components/panels/CategoryPanel'
 import { WeekPanel } from '@/components/panels/WeekPanel'
 import { TodoPanel } from '@/components/panels/TodoPanel'
-import { Menu, X, ChevronLeft, ChevronRight, LogOut } from 'lucide-react'
+import { ChevronLeft, ChevronRight, LogOut } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
 import { UserProfileModal } from '@/components/modals/UserProfileModal'
 
@@ -24,7 +24,6 @@ function DashboardContent() {
 }
 
 function DashboardLayout() {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [activePanel, setActivePanel] = useState<'categories' | 'weeks' | 'todos'>('todos')
   const [profileOpen, setProfileOpen] = useState(false)
   const { sidebarVisible, toggleSidebar } = useTodoContext()
@@ -45,14 +44,6 @@ function DashboardLayout() {
               title={sidebarVisible ? 'Hide sidebar' : 'Show sidebar'}
             >
               {sidebarVisible ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
-            </button>
-            {/* Mobile menu button */}
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-2 rounded-md hover:bg-gray-100"
-              aria-label="Toggle menu"
-            >
-              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
           </div>
           <h1 className="text-lg font-semibold">Mood Todo</h1>
@@ -117,7 +108,7 @@ function DashboardLayout() {
             ${sidebarVisible ? 'lg:block' : 'lg:hidden'}
             ${activePanel === 'categories' ? 'block' : 'hidden'}
           `}>
-            <CategoryPanel />
+            <CategoryPanel onSelect={() => setActivePanel('weeks')} />
           </aside>
 
           {/* Middle Panel: Weeks */}
@@ -126,7 +117,7 @@ function DashboardLayout() {
             ${sidebarVisible ? 'lg:block' : 'lg:hidden'}
             ${activePanel === 'weeks' ? 'block' : 'hidden'}
           `}>
-            <WeekPanel />
+            <WeekPanel onSelect={() => setActivePanel('todos')} />
           </aside>
 
           {/* Right Panel: Todos */}

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import {
   DndContext,
   closestCenter,
@@ -49,6 +49,15 @@ export function TodoPanel() {
     reorderTodos,
   } = useTodoContext()
   const [activeTab, setActiveTab] = useState<'todos' | 'plan'>('todos')
+  const [now, setNow] = useState<Date | null>(null)
+  useEffect(() => { setNow(new Date()) }, [])
+  const contentRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!contentRef.current) return
+    const todayStr = formatDateForAPI(new Date())
+    const el = contentRef.current.querySelector<HTMLElement>(`[data-date="${todayStr}"]`)
+    el?.scrollIntoView({ block: 'start', behavior: 'smooth' })
+  }, [todos])
   const [newTodoContent, setNewTodoContent] = useState<{ [date: string]: string }>({})
   const [editingTodoId, setEditingTodoId] = useState<string | null>(null)
   const [editingContent, setEditingContent] = useState('')
@@ -231,9 +240,9 @@ export function TodoPanel() {
           Week {selectedWeek.weekNumber} - {new Date(selectedWeek.startDate).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })} to {new Date(selectedWeek.endDate).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}
         </h1>
         <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
-          <span className="hidden sm:inline">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</span>
-          <span className="sm:hidden">{new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-          <span>{new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</span>
+          {now && <span className="hidden sm:inline">{now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</span>}
+          {now && <span className="sm:hidden">{now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>}
+          {now && <span>{now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</span>}
           {isCombinedView && (
             <span className="text-xs px-2 py-1 rounded bg-muted">
               Read-only view
@@ -275,14 +284,14 @@ export function TodoPanel() {
 
       {/* Content Area */}
       {(activeTab === 'todos' || isCombinedView) && (
-      <div className="px-4 sm:px-6 md:px-12 py-4 sm:py-6 md:py-8 space-y-4 sm:space-y-6">
+      <div ref={contentRef} className="px-4 sm:px-6 md:px-12 py-4 sm:py-6 md:py-8 space-y-4 sm:space-y-6">
         {todos.map((dateGroup) => {
           const dateGroupWithTag = dateGroup as TodosByDateWithTag
           const isCollapsed =
             dateGroupWithTag.dayTag && (dateGroupWithTag.isCollapsed || collapsedDays.has(dateGroup.date))
 
           return (
-            <Card key={dateGroup.date}>
+            <Card key={dateGroup.date} data-date={dateGroup.date}>
               <CardHeader
                 className={isWorkDaily && dateGroupWithTag.dayTag ? 'cursor-pointer' : ''}
                 onClick={() => {
